@@ -45,6 +45,13 @@ varying vec2 v_fade_tex;
 varying float v_gamma_scale;
 varying float v_size;
 
+float clipUnusedGlyphAngles(const float renderSize, const float layoutSize, const float minZoom, const float maxZoom) {
+    float zoomAdjust = log2(renderSize / layoutSize);
+    float adjustedZoom = (u_zoom - zoomAdjust) * 10.0;
+    // result: 0 if minZoom <= adjustedZoom < maxZoom, and 1 otherwise
+    return 2.0 - step(minZoom, adjustedZoom) - (1.0 - step(maxZoom, adjustedZoom));
+}
+
 void main() {
     #pragma mapbox: initialize highp vec4 fill_color
     #pragma mapbox: initialize highp vec4 halo_color
@@ -58,6 +65,7 @@ void main() {
     vec2 a_tex = a_data.xy;
     mediump vec2 label_data = unpack_float(a_data[2]);
     mediump float a_labelminzoom = label_data[0];
+    mediump float a_lineangle = (label_data[1] / 256.0 * 2.0 * PI);
     mediump vec2 a_zoom = unpack_float(a_data[3]);
     mediump float a_minzoom = a_zoom[0];
     mediump float a_maxzoom = a_zoom[1];
@@ -87,23 +95,23 @@ void main() {
 
     float fontScale = u_is_text ? v_size / 24.0 : v_size;
 
-    mediump float zoomAdjust = log2(v_size / layoutSize);
-    mediump float adjustedZoom = (u_zoom - zoomAdjust) * 10.0;
-    // result: z = 0 if a_minzoom <= adjustedZoom < a_maxzoom, and 1 otherwise
-    mediump float z = 2.0 - step(a_minzoom, adjustedZoom) - (1.0 - step(a_maxzoom, adjustedZoom));
-
     highp float perspective_ratio = 1.0;
+    //mediump float z = clipUnusedGlyphAngles(v_size, layoutSize, a_minzoom, a_maxzoom);
     // pitch-alignment: map
     // rotation-alignment: map | viewport
     if (u_pitch_with_map) {
-        lowp float angle = u_rotate_with_map ? (label_data[1] / 256.0 * 2.0 * PI) : u_bearing;
+        lowp float angle = u_rotate_with_map ? a_lineangle : u_bearing;
         lowp float asin = sin(angle);
         lowp float acos = cos(angle);
         mat2 RotationMatrix = mat2(acos, asin, -1.0 * asin, acos);
         vec2 offset = RotationMatrix * a_offset;
         vec2 extrude = fontScale * u_extrude_scale * (offset / 64.0);
-        gl_Position = u_matrix * vec4(a_pos + extrude, 0, 1);
-        gl_Position.z += z * gl_Position.w;
+        vec4 projectedPoint = u_matrix * vec4(a_pos, 0, 1);
+
+        perspective_ratio += (1.0 - u_pitch_scale)*((projectedPoint.w / u_camera_to_center_distance) - 1.0);
+        extrude *= perspective_ratio;
+        gl_Position+= u_matrix * vec4(a_pos + extrude, 0, 1);
+        gl_Position.z += clipUnusedGlyphAngles(v_size*perspective_ratio, layoutSize, a_minzoom, a_maxzoom) * gl_Position.w;
     // pitch-alignment: viewport
     // rotation-alignment: map
     } else if (u_rotate_with_map) {
@@ -111,23 +119,28 @@ void main() {
         // as a label goes from horizontal <=> vertical in angle
         // it goes from 0% foreshortening to up to around 70% foreshortening
         lowp float pitchfactor = 1.0 - cos(u_pitch * sin(u_pitch * 0.75));
-
-        lowp float lineangle = label_data[1] / 256.0 * 2.0 * PI;
+        pitchfactor *= u_pitch_scale;
 
         // use the lineangle to position points a,b along the line
         // project the points and calculate the label angle in projected space
         // this calculation allows labels to be rendered unskewed on pitched maps
         vec4 a = u_matrix * vec4(a_pos, 0, 1);
-        vec4 b = u_matrix * vec4(a_pos + vec2(cos(lineangle),sin(lineangle)), 0, 1);
+        vec4 b = u_matrix * vec4(a_pos + vec2(cos(a_lineangle),sin(a_lineangle)), 0, 1);
         lowp float angle = atan((b[1]/b[3] - a[1]/a[3])/u_aspect_ratio, b[0]/b[3] - a[0]/a[3]);
         lowp float asin = sin(angle);
         lowp float acos = cos(angle);
         mat2 RotationMatrix = mat2(acos, -1.0 * asin, asin, acos);
+        mediump float foreshortening = (1.0-pitchfactor)+(pitchfactor*cos(angle*2.0));
 
-        vec2 offset = RotationMatrix * (vec2((1.0-pitchfactor)+(pitchfactor*cos(angle*2.0)), 1.0) * a_offset);
+        vec2 offset = RotationMatrix * (vec2(foreshortening, 1.0) * a_offset);
         vec2 extrude = fontScale * u_extrude_scale * (offset / 64.0);
-        gl_Position = u_matrix * vec4(a_pos, 0, 1) + vec4(extrude, 0, 0);
-        gl_Position.z += z * gl_Position.w;
+        gl_Position = u_matrix * vec4(a_pos, 0, 1);
+
+        perspective_ratio += (1.0 - u_pitch_scale)*((gl_Position.w / u_camera_to_center_distance) - 1.0);
+        extrude *= perspective_ratio;
+        gl_Position += vec4(extrude, 0, 0);
+
+        gl_Position.z += clipUnusedGlyphAngles(v_size*perspective_ratio, layoutSize, a_minzoom, a_maxzoom) * gl_Position.w;
     // pitch-alignment: viewport
     // rotation-alignment: viewport
     } else {
