@@ -2976,6 +2976,8 @@
       "layout": {
         "text-size": 9,
         "icon-image": "{shield}-{reflen}",
+        "icon-pitch-scale": 0.1,
+        "text-pitch-scale": 0.1,
         "icon-rotation-alignment": "viewport",
         "text-max-angle": 38,
         "symbol-spacing": { "base": 1, "stops": [ [ 11, 150 ], [ 14, 200 ] ] },

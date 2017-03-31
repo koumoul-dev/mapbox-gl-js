@@ -10,7 +10,7 @@ uniform mediump float u_size_t; // used to interpolate between zoom stops when s
 uniform mediump float u_size; // used when size is both zoom and feature constant
 uniform mediump float u_layout_size; // used when size is feature constant
 uniform mediump float u_camera_to_center_distance;
-uniform mediump float u_text_pitch_scale;
+uniform mediump float u_pitch_scale;
 
 #pragma mapbox: define lowp float opacity
 
@@ -78,7 +78,7 @@ void main() {
         gl_Position.z += z * gl_Position.w;
     } else {
         gl_Position = u_matrix * vec4(a_pos, 0, 1);
-        perspective_ratio += (1.0 - u_text_pitch_scale)*((gl_Position.w / u_camera_to_center_distance) - 1.0);
+        perspective_ratio += (1.0 - u_pitch_scale)*((gl_Position.w / u_camera_to_center_distance) - 1.0);
         extrude *= perspective_ratio;
         gl_Position += vec4(extrude, 0, 0);
     }

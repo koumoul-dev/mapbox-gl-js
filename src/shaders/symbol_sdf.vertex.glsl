@@ -35,7 +35,7 @@ uniform mediump float u_pitch;
 uniform mediump float u_bearing;
 uniform mediump float u_aspect_ratio;
 uniform mediump float u_camera_to_center_distance;
-uniform mediump float u_text_pitch_scale;
+uniform mediump float u_pitch_scale;
 uniform vec2 u_extrude_scale;
 
 uniform vec2 u_texsize;
@@ -134,7 +134,7 @@ void main() {
         gl_Position = u_matrix * vec4(a_pos, 0, 1);
 
         vec2 extrude = fontScale * u_extrude_scale * (a_offset / 64.0);
-        perspective_ratio += (1.0 - u_text_pitch_scale)*((gl_Position.w / u_camera_to_center_distance) - 1.0);
+        perspective_ratio += (1.0 - u_pitch_scale)*((gl_Position.w / u_camera_to_center_distance) - 1.0);
         extrude *= perspective_ratio;
 
         gl_Position += vec4(extrude, 0, 0);

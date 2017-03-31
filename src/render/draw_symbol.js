@@ -182,7 +182,7 @@ function setSymbolDrawState(program, painter, layer, tileZoom, isText, isSDF, ro
         gl.uniform1f(program.u_size, size);
     }
     gl.uniform1f(program.u_camera_to_center_distance, tr.cameraToCenterDistance);
-    gl.uniform1f(program.u_text_pitch_scale, layer.getLayoutValue('text-pitch-scale'));
+    gl.uniform1f(program.u_pitch_scale, layer.getLayoutValue(isText ? 'text-pitch-scale' : 'icon-pitch-scale'));
 }
 
 function drawTileSymbols(program, programConfiguration, painter, layer, tile, buffers, isText, isSDF, pitchWithMap) {
