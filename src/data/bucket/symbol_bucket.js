@@ -547,7 +547,8 @@ class SymbolBucket {
 
         this.createArrays();
 
-        const layout = this.layers[0].layout;
+        const layer = this.layers[0];
+        const layout = layer.layout;
 
         const maxScale = collisionTile.maxScale;
 
@@ -620,14 +621,43 @@ class SymbolBucket {
             if (hasText) {
                 collisionTile.insertCollisionFeature(textCollisionFeature, glyphScale, layout['text-ignore-placement']);
                 if (glyphScale <= maxScale) {
-                    this.addSymbols(this.arrays.glyph, symbolInstance.glyphQuads, glyphScale, symbolInstance.textSizeData, layout['text-keep-upright'], textAlongLine, collisionTile.angle, symbolInstance.featureProperties, symbolInstance.writingModes);
+                    const textSizeData = getSizeAttributeData(layer,
+                        this.zoom,
+                        this.textSizeCoveringZoomStops,
+                        'text-size',
+                        symbolInstance.featureProperties);
+                    this.addSymbols(
+                        this.arrays.glyph,
+                        symbolInstance.glyphQuads,
+                        glyphScale,
+                        textSizeData,
+                        layout['text-keep-upright'],
+                        textAlongLine,
+                        collisionTile.angle,
+                        symbolInstance.featureProperties,
+                        symbolInstance.writingModes);
                 }
             }
 
             if (hasIcon) {
                 collisionTile.insertCollisionFeature(iconCollisionFeature, iconScale, layout['icon-ignore-placement']);
                 if (iconScale <= maxScale) {
-                    this.addSymbols(this.arrays.icon, symbolInstance.iconQuads, iconScale, symbolInstance.iconSizeData, layout['icon-keep-upright'], iconAlongLine, collisionTile.angle, symbolInstance.featureProperties);
+                    const iconSizeData = getSizeAttributeData(
+                        layer,
+                        this.zoom,
+                        this.iconSizeCoveringZoomStops,
+                        'icon-size',
+                        symbolInstance.featureProperties);
+                    this.addSymbols(
+                        this.arrays.icon,
+                        symbolInstance.iconQuads,
+                        iconScale,
+                        iconSizeData,
+                        layout['icon-keep-upright'],
+                        iconAlongLine,
+                        collisionTile.angle,
+                        symbolInstance.featureProperties
+                    );
                 }
             }
 
@@ -785,9 +815,6 @@ class SymbolBucket {
             (shapedTextOrientations[WritingMode.horizontal] ? WritingMode.horizontal : 0)
         );
 
-        const textSizeData = getSizeAttributeData(layer, this.zoom, this.textSizeCoveringZoomStops, 'text-size', featureProperties);
-        const iconSizeData = getSizeAttributeData(layer, this.zoom, this.iconSizeCoveringZoomStops, 'icon-size', featureProperties);
-
         this.symbolInstances.push({
             textBoxStartIndex,
             textBoxEndIndex,
@@ -795,8 +822,6 @@ class SymbolBucket {
             iconBoxEndIndex,
             glyphQuads,
             iconQuads,
-            textSizeData,
-            iconSizeData,
             anchor,
             featureIndex,
             featureProperties,
